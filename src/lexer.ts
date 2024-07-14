@@ -20,9 +20,15 @@ export class Lexer {
     this.transform(json);
   }
 
+   isNumber(str: string) {
+    const regex = /^-?\d+(\.\d+)?$/;  // Regular expression to match integers and floating-point numbers
+    return regex.test(str);
+}
+
   transform(json: string) {
     for (let c=0; c<json.length;c++){
       const character = json[c]
+      console.log('--------character', character)
       switch (character){
         case '{':
           this.tokens.push(new Token('open_brace', character))
@@ -54,7 +60,24 @@ export class Lexer {
           c =j
           break;
         default:
-          return new Error('EOF')
+          let k = c
+          let nonStrVal = ''
+          const endChar = [']','}',',']
+          while (!endChar.includes(json[k])){
+            nonStrVal += json[k]
+            k++
+          }
+
+          if (nonStrVal === 'null'){
+            this.tokens.push(new Token('null', nonStrVal))
+          } else if ( nonStrVal === 'true' || nonStrVal === 'false'){
+            this.tokens.push(new Token('boolean', nonStrVal))
+          } else if (this.isNumber(nonStrVal)){
+            this.tokens.push(new Token('number', nonStrVal))
+          } else {
+            return new Error('EOF')
+          }
+          c =k
       }
     }
   }
