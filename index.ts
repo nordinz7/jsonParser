@@ -1,10 +1,3 @@
-// lexer
-  // loops thorugh characters
-  // generates tokens
-//parser
-  // generate AST
-// transformer
-
 import { Lexer } from "./src/lexer"
 import { Parser } from "./src/parser"
 
@@ -38,6 +31,6 @@ const sample  ={
 }
 
 
-const lexer = new Lexer(JSON.stringify(sample))
-console.log('--------lexer',lexer )
-// const parser  = new Parser(lexer)
+const lexer = new Lexer(JSON.stringify(sample), {generateJsonFile: true})
+const parser = new Parser(lexer.tokens)
+console.log('--------p',parser.value )
