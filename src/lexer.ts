@@ -1,7 +1,10 @@
-export type JsonTokenType =  'string' | 'number' | 'boolean' | 'null' | 'object' | 'array' | 'colon' | 'comma' | 'open_brace' | 'close_brace' | 'open_bracket' | 'close_bracket';
+export type JsonTokenType =  'string' | 'empty' | 'number' | 'boolean' | 'null' | 'object' | 'array' | 'colon' | 'comma' | 'open_brace' | 'close_brace' | 'open_bracket' | 'close_bracket';
+export type Opts ={
+  generateJsonFile: boolean
+}
 
-
-class Token {
+const fs = require('fs')
+export class Token {
   public type: JsonTokenType;
   public value: any;
 
@@ -12,60 +15,70 @@ class Token {
 }
 
 export class Lexer {
-  public json: string;
   public tokens: Token[] = [];
+  public json: string;
+  private position: number;
+  private currentChar: string;
+  private opts: Opts
 
-  constructor(json: string) {
+  constructor(json: string, opts: Opts ={ generateJsonFile: false}) {
     this.json = json;
-    this.transform(json);
+    this.opts = opts
+    this.position = 0;
+    this.currentChar = this.json[this.position];
+    this.value()
   }
 
-   isNumber(str: string) {
+  private getNext(){
+    this.position++
+    this.currentChar = this.json[this.position]
+  }
+
+   private isNumber(str: string) {
     const regex = /^-?\d+(\.\d+)?$/;  // Regular expression to match integers and floating-point numbers
     return regex.test(str);
-}
+  }
 
-  transform(json: string) {
-    for (let c=0; c<json.length;c++){
-      const character = json[c]
-      console.log('--------character', character)
-      switch (character){
+  private tokenize() {
+      switch (this.currentChar){
         case '{':
-          this.tokens.push(new Token('open_brace', character))
+          this.tokens.push(new Token('open_brace', this.currentChar))
           break;
         case '}':
-          this.tokens.push(new Token('close_brace', character))
+          this.tokens.push(new Token('close_brace', this.currentChar))
           break;
         case '[':
-          this.tokens.push(new Token('open_bracket', character))
+          this.tokens.push(new Token('open_bracket', this.currentChar))
           break;
         case ']':
-          this.tokens.push(new Token('close_bracket', character))
+          this.tokens.push(new Token('close_bracket', this.currentChar))
           break;
         case ',':
-          this.tokens.push(new Token('comma', character))
+          this.tokens.push(new Token('comma', this.currentChar))
           break;
         case ':':
-            this.tokens.push(new Token('colon', character))
+            this.tokens.push(new Token('colon', this.currentChar))
             break;
         case '"':
-          let j = c
-          j++
+          this.getNext()
+
           let strVal = ''
-          while (json[j] !== '"'){
-            strVal += json[j]
-            j++
+          while (this.currentChar !== '"'){
+            strVal += this.currentChar
+            this.getNext()
           }
+
           this.tokens.push(new Token('string', strVal))
-          c =j
-          break;
+          break
+        case '':
+          this.tokens.push(new Token('empty', this.currentChar))
+          break
         default:
-          let k = c
+          const endChar = ['}', ']', ',']
           let nonStrVal = ''
-          const endChar = [']','}',',']
-          while (!endChar.includes(json[k])){
-            nonStrVal += json[k]
-            k++
+          while (!endChar.includes(this.currentChar)){
+            nonStrVal += this.currentChar
+            this.getNext()
           }
 
           if (nonStrVal === 'null'){
@@ -77,9 +90,17 @@ export class Lexer {
           } else {
             return new Error('EOF')
           }
-          c =k
+
+          this.tokenize() // tokenize end char
       }
-    }
+
   }
 
+  private value(){
+    while(this.position < this.json.length){
+      this.tokenize()
+      this.getNext()
+    }
+    this.opts.generateJsonFile && fs.writeFileSync('tokens.json', JSON.stringify(this.tokens))
+  }
 }
